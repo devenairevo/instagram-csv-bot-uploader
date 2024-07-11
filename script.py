@@ -1,6 +1,7 @@
 import csv
 import time
 import requests
+import random
 from instagrapi import Client
 from io import BytesIO
 from PIL import Image
@@ -8,14 +9,16 @@ from PIL import Image
 cl = Client()
 
 # Login to Instagram
-cl.login(username='instagram_username', password='instagram_password')
+cl.login(username='YOUR_USERNAME', password='YOUR_PASSWORD')
 
 # Path to your CSV file
-csv_file_path = 'PATH TO CSV'
+csv_file_path = 'output.csv'
+
+sliptime_min, sleeptime_max = 120, 300
 
 # Function to create hashtags from keywords
 def create_hashtags(keyword_string):
-    keywords = keyword_string.split(',')  
+    keywords = keyword_string.split(',')
     hashtags = set()
     
     for keyword in keywords:
@@ -28,23 +31,23 @@ def create_hashtags(keyword_string):
     
     return ' '.join(hashtags)
 
-# Function to enhance title (simplified version)
-def enhance_title_with_emojis(title):
-    return f"{title.capitalize()}"
-
 # Open and read the CSV file, handle BOM
 with open(csv_file_path, mode='r', encoding='utf-8-sig') as file:
     reader = csv.DictReader(file)
     
     # Print the headers to check for issues
     headers = reader.fieldnames
-    print(f"Headers found: {headers}")
     
     for row in reader:
         try:
+            # Introduce a random delay between 2 to 4 minutes before processing each row
+            sleep_time = random.randint(sliptime_min, sleeptime_max)
+            print(f"Sleeping for {sleep_time} seconds before processing next post.")
+            time.sleep(sleep_time)
+            
             # Access the CSV columns, ensuring they exist and stripping any potential whitespace
             image_url = row['Media URL'].strip() if 'Media URL' in row else None
-            title = row['Title'].strip() if 'Title' in row else None
+            title = row['Title'].strip().replace('"', '') if 'Title' in row else None
             affiliate_link = row['Link'].strip() if 'Link' in row else None
             keywords = row.get('Keywords', '').strip()  # Use .get to handle missing keywords
             
@@ -56,22 +59,26 @@ with open(csv_file_path, mode='r', encoding='utf-8-sig') as file:
             # Create hashtags from keywords
             hashtags = create_hashtags(keywords)
             
-            # Enhance the title (simplified)
-            enhanced_title = enhance_title_with_emojis(title)
+            # Keep the title as is without modification, removing quotes
+            enhanced_title = title
             
             # Add emojis around the affiliate link
             affiliate_link_with_emojis = f"👉 {affiliate_link} 👈"
             
             # Additional promotional text
             promo_text = (
-                "🔥 Get 30% OFF Now! 🔥"
+                "🔥 Get 30% OFF Now! 🔥\n"
+                "- ℹ️ Discover unbeatable deals and elevate your style.\n"
+                "- 🔎 Just search for 👉 acq885235 👈 in the Temu App and unlock exclusive savings.\n"
+                "- 🔥 Don't miss out – this offer is available for a limited time! ⏱️\n\n"
+                "*Affiliate"
             )
             
             # Compose the full caption with priority: affiliate link (with emojis), formatted title, hashtags, and promo text
-            caption = f"{affiliate_link_with_emojis}\n\n{enhanced_title}\n\n{hashtags}\n\n{promo_text}"
+            caption = f"{affiliate_link_with_emojis}\n\n{enhanced_title}\n\n{hashtags}" #f"{affiliate_link_with_emojis}\n\n{enhanced_title}\n\n{hashtags}\n\n{promo_text}"
             
             # Print the caption and image path for debugging purposes
-            print(f"Uploading: {image_url} with caption: {caption}")
+            print(f"\nUploading: {image_url} with caption: {caption}")
             
             # Download the image from the URL
             response = requests.get(image_url)
@@ -84,11 +91,7 @@ with open(csv_file_path, mode='r', encoding='utf-8-sig') as file:
                 image.save(temp_image_path)
 
                 # Upload the image with the caption
-                cl.photo_upload(temp_image_path, caption)
-                
-                # Introduce a delay between posts
-                time.sleep(20)  # Increase delay to 20 seconds
-                
+                cl.photo_upload(temp_image_path, caption)         
             else:
                 print(f"Failed to download image: {image_url}")
         
